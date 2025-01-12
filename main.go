@@ -90,6 +90,24 @@ func checkAuth(deviceCodeResp *DeviceCodeResponse) (*CheckAuthResponse, error) {
     }
 }
 
+func saveToken(token string) error {
+	data := map[string]string{"authToken": token}
+
+	file, err := os.Create("userConfig.json")
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	if err := encoder.Encode(data); err != nil {
+		return fmt.Errorf("failed to write token to file: %w", err)
+	}
+
+	return nil
+}
+
 func main() {
 	// Step 1: Request Device Code
 	fmt.Println("Welcome to the JamLaunch CLI!")
@@ -112,7 +130,12 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Access Token: %s\n", authResponse.AccessToken)
+	if err := saveToken(authResponse.AccessToken); err != nil {
+		fmt.Printf("Error saving token: %v\n", err)
+		return
+	}
+
+	fmt.Println("Token saved!")
 
 	reader := bufio.NewReader(os.Stdin)
 
