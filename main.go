@@ -108,34 +108,67 @@ func saveToken(token string) error {
 	return nil
 }
 
+func loadToken() (bool, string) {
+	file, err := os.Open("userConfig.json")
+
+	if err != nil {
+		return false, ""
+	}
+	defer file.Close()
+
+	var data map[string]string
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&data); err != nil {
+		return false, ""
+	}
+
+	authToken := data["authToken"]
+
+	if authToken == "" {
+		return false, ""
+	}
+
+	return true, authToken
+}
+
 func main() {
 	// Step 1: Request Device Code
 	fmt.Println("Welcome to the JamLaunch CLI!")
-	fmt.Println("Requesting device code...")
-	deviceCodeResp, err := requestUserCode()
-	if err != nil {
-		fmt.Printf("Error requesting user code: %v\n", err)
-		return
+
+	fmt.Println("Checking Token...")
+	result, token := loadToken()
+
+	if result == false {
+		fmt.Println("Token not found or invalid! User must authenticate again.")
+
+		fmt.Println("Requesting user code...")
+		deviceCodeResp, err := requestUserCode()
+		if err != nil {
+			fmt.Printf("Error requesting user code: %v\n", err)
+			return
+		}
+
+		// Step 2: Display User Instructions
+		fmt.Printf("Visit: %s?user_code=%s\n", userAuthEndpoint, deviceCodeResp.UserCode)
+		fmt.Printf("Enter the code: %s\n", deviceCodeResp.UserCode)
+
+		// Step 3: Poll for Access Token
+		fmt.Println("Waiting for user authentication...")
+		authResponse, err := checkAuth(deviceCodeResp)
+		if err != nil {
+			fmt.Printf("Error polling for token: %v\n", err)
+			return
+		}
+
+		if err := saveToken(authResponse.AccessToken); err != nil {
+			fmt.Printf("Error saving token: %v\n", err)
+			return
+		}
+
+		fmt.Println("Token saved!")
+	} else {
+		fmt.Printf("Valid token found: %s\n", token)
 	}
-
-	// Step 2: Display User Instructions
-	fmt.Printf("Visit: %s?user_code=%s\n", userAuthEndpoint, deviceCodeResp.UserCode)
-	fmt.Printf("Enter the code: %s\n", deviceCodeResp.UserCode)
-
-	// Step 3: Poll for Access Token
-	fmt.Println("Waiting for user authentication...")
-	authResponse, err := checkAuth(deviceCodeResp)
-	if err != nil {
-		fmt.Printf("Error polling for token: %v\n", err)
-		return
-	}
-
-	if err := saveToken(authResponse.AccessToken); err != nil {
-		fmt.Printf("Error saving token: %v\n", err)
-		return
-	}
-
-	fmt.Println("Token saved!")
 
 	reader := bufio.NewReader(os.Stdin)
 
