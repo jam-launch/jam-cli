@@ -144,6 +144,7 @@ func loadToken() (bool, string) {
 	result := parseToken(authToken);
 	if result.Errored {
 		fmt.Println("Error:", result.Error)
+		return false, ""
 	} else {
 		fmt.Println("Header:", result.Data.Header)
 		fmt.Println("Claims:", result.Data.Claims)
