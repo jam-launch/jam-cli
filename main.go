@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"encoding/json"
+	"encoding/base64"
 	"net/http"
 	"time"
 	"bytes"
@@ -30,6 +31,18 @@ type DeviceCodeResponse struct {
 type CheckAuthResponse struct {
 	AccessToken string `json:"accessKey,omitempty"`
 	AccessState string `json:"state"`
+}
+
+type TokenData struct {
+	Header    map[string]interface{}
+	Claims    map[string]interface{}
+	Signature string
+}
+
+type TokenParseResult struct {
+	Data    *TokenData
+	Errored bool
+	Error   string
 }
 
 func requestUserCode() (*DeviceCodeResponse, error) {
@@ -95,14 +108,14 @@ func saveToken(token string) error {
 
 	file, err := os.Create("userConfig.json")
 	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
+		return fmt.Errorf("Failed to create file: %w", err)
 	}
 
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
 	if err := encoder.Encode(data); err != nil {
-		return fmt.Errorf("failed to write token to file: %w", err)
+		return fmt.Errorf("Failed to write token to file: %w", err)
 	}
 
 	return nil
@@ -128,7 +141,87 @@ func loadToken() (bool, string) {
 		return false, ""
 	}
 
+	result := parseToken(authToken);
+	if result.Errored {
+		fmt.Println("Error:", result.Error)
+	} else {
+		fmt.Println("Header:", result.Data.Header)
+		fmt.Println("Claims:", result.Data.Claims)
+		fmt.Println("Signature:", result.Data.Signature)
+	}
+
+	expiration, ok := result.Data.Claims["exp"].(float64)
+	if !ok {
+		fmt.Println("Error: 'exp' claim is missing or not a float64")
+		return false, ""
+	}
+
+	expTime := time.Unix(int64(expiration), 0)
+
+	if time.Now().After(expTime) {
+		fmt.Println("Error: Token Expired!")
+		return false, ""
+	}
+
 	return true, authToken
+}
+
+func parseToken(token string) TokenParseResult {
+	var result TokenParseResult
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		result.Errored = true
+		result.Error = "Invalid JWT token format"
+		return result
+	}
+
+	tkn := &TokenData{}
+
+	// Parse Header
+	headerJSON, err := decodeBase64URL(parts[0])
+	if err != nil {
+		result.Errored = true
+		result.Error = "Failed to decode JWT header: " + err.Error()
+		return result
+	}
+	if err := json.Unmarshal([]byte(headerJSON), &tkn.Header); err != nil {
+		result.Errored = true
+		result.Error = "Failed to parse JWT header: " + err.Error()
+		return result
+	}
+
+	// Parse Claims
+	claimsJSON, err := decodeBase64URL(parts[1])
+	if err != nil {
+		result.Errored = true
+		result.Error = "Failed to decode JWT claims: " + err.Error()
+		return result
+	}
+	if err := json.Unmarshal([]byte(claimsJSON), &tkn.Claims); err != nil {
+		result.Errored = true
+		result.Error = "Failed to parse JWT claims: " + err.Error()
+		return result
+	}
+
+	// Parse Signature
+	sig, err := decodeBase64URL(parts[2])
+	if err != nil || len(sig) == 0 {
+		result.Errored = true
+		result.Error = "Failed to decode JWT signature: " + err.Error()
+		return result
+	}
+	tkn.Signature = parts[2]
+
+	result.Data = tkn
+	return result
+}
+
+func decodeBase64URL(data string) (string, error) {
+	decoded, err := base64.RawURLEncoding.DecodeString(data)
+	if err != nil {
+		return "", err
+	}
+	return string(decoded), nil
 }
 
 func main() {
