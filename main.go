@@ -2,30 +2,32 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
 	"os"
 	"strings"
-	"encoding/json"
-	"encoding/base64"
-	"net/http"
 	"time"
-	"bytes"
 )
 
 const (
 	deviceCodeEndpoint = "https://api.jamlaunch.com/device-auth/request"
-	userAuthEndpoint = "https://app.jamlaunch.com/device-auth"
-	client_id = "jamlaunch-addon"
+	userAuthEndpoint   = "https://app.jamlaunch.com/device-auth"
+	client_id          = "jamlaunch-addon"
 )
 
 type DeviceCodeRequest struct {
-	ClientId    string `json:"clientId"`
-	Scope       string `json:"scope"`
+	ClientId string `json:"clientId"`
+	Scope    string `json:"scope"`
 }
 
 type DeviceCodeResponse struct {
-	DeviceCode  string `json:"deviceCode"`
-	UserCode    string `json:"userCode"`
+	DeviceCode string `json:"deviceCode"`
+	UserCode   string `json:"userCode"`
 }
 
 type CheckAuthResponse struct {
@@ -46,35 +48,35 @@ type TokenParseResult struct {
 }
 
 func requestUserCode() (*DeviceCodeResponse, error) {
-    payload := DeviceCodeRequest {
-		ClientId : client_id,
-		Scope : "developer",
+	payload := DeviceCodeRequest{
+		ClientId: client_id,
+		Scope:    "developer",
 	}
-    body, _ := json.Marshal(payload)
+	body, _ := json.Marshal(payload)
 
-    resp, err := http.Post(deviceCodeEndpoint, "application/json", bytes.NewBuffer(body))
-    if err != nil {
-        return nil, fmt.Errorf("failed to send request: %w", err)
-    }
-    defer resp.Body.Close()
+	resp, err := http.Post(deviceCodeEndpoint, "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
 
-    if resp.StatusCode != http.StatusOK {
-        return nil, fmt.Errorf("received non-OK HTTP status: %s", resp.Status)
-    }
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("received non-OK HTTP status: %s", resp.Status)
+	}
 
-    var deviceCodeResp DeviceCodeResponse
-    err = json.NewDecoder(resp.Body).Decode(&deviceCodeResp)
-    if err != nil {
-        return nil, fmt.Errorf("failed to decode response: %w", err)
-    }
+	var deviceCodeResp DeviceCodeResponse
+	err = json.NewDecoder(resp.Body).Decode(&deviceCodeResp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
 
-    return &deviceCodeResp, nil
+	return &deviceCodeResp, nil
 }
 
 func checkAuth(deviceCodeResp *DeviceCodeResponse) (*CheckAuthResponse, error) {
 	checkURL := fmt.Sprintf("%s/%s/%s", deviceCodeEndpoint, deviceCodeResp.UserCode, deviceCodeResp.DeviceCode)
 
-    for {
+	for {
 		// Send GET request
 		resp, err := http.Get(checkURL)
 		if err != nil {
@@ -100,7 +102,7 @@ func checkAuth(deviceCodeResp *DeviceCodeResponse) (*CheckAuthResponse, error) {
 
 		// Delay before the next request
 		time.Sleep(time.Second)
-    }
+	}
 }
 
 func saveToken(token string) error {
@@ -141,7 +143,7 @@ func loadToken() (bool, string) {
 		return false, ""
 	}
 
-	result := parseToken(authToken);
+	result := parseToken(authToken)
 	if result.Errored {
 		fmt.Println("Error:", result.Error)
 		return false, ""
@@ -161,6 +163,13 @@ func loadToken() (bool, string) {
 
 	if time.Now().After(expTime) {
 		fmt.Println("Error: Token Expired!")
+		return false, ""
+	}
+
+	verifyResult := verifyToken(authToken)
+
+	if verifyResult == false {
+		fmt.Println("Error: Token Invalid!")
 		return false, ""
 	}
 
@@ -223,6 +232,33 @@ func decodeBase64URL(data string) (string, error) {
 		return "", err
 	}
 	return string(decoded), nil
+}
+
+func verifyToken(authToken string) bool {
+	req, err := http.NewRequest("GET", "https://api.jamlaunch.com/projects", nil)
+	if err != nil {
+		log.Fatalf("Error creating request: %v", err)
+		return false
+	}
+
+	req.Header.Add("Authorization", "Bearer "+authToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("Error making request: %v", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Error reading response: %v", err)
+		return false
+	}
+
+	fmt.Printf("Response:\n%s\n", body)
+	return true
 }
 
 func main() {
