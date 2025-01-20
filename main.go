@@ -96,7 +96,7 @@ func checkAuth(deviceCodeResp *DeviceCodeResponse) (*CheckAuthResponse, error) {
 
 		// Check the state
 		if authResponse.AccessState == "allowed" {
-			fmt.Println("Access granted!")
+			fmt.Println("Login Successful!")
 			return &authResponse, nil
 		}
 
@@ -147,10 +147,6 @@ func loadToken() (bool, string) {
 	if result.Errored {
 		fmt.Println("Error:", result.Error)
 		return false, ""
-	} else {
-		fmt.Println("Header:", result.Data.Header)
-		fmt.Println("Claims:", result.Data.Claims)
-		fmt.Println("Signature:", result.Data.Signature)
 	}
 
 	expiration, ok := result.Data.Claims["exp"].(float64)
@@ -257,8 +253,40 @@ func verifyToken(authToken string) bool {
 		return false
 	}
 
-	fmt.Printf("Response:\n%s\n", body)
-	return true
+	var data map[string]interface{}
+	if err := json.Unmarshal(body, &data); err != nil {
+		log.Fatalf("Error unmarshaling JSON: %v", err)
+	}
+
+	if _, exists := data["projects"]; exists {
+		return true
+	} else {
+		return false
+	}
+}
+
+func login() {
+	fmt.Println("User has requested a new login token...")
+
+	deviceCodeResp, err := requestUserCode()
+	if err != nil {
+		fmt.Printf("Error requesting user code: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Visit: %s?user_code=%s\n", userAuthEndpoint, deviceCodeResp.UserCode)
+	fmt.Printf("Enter the code: %s\n", deviceCodeResp.UserCode)
+
+	authResponse, err := checkAuth(deviceCodeResp)
+	if err != nil {
+		fmt.Printf("Error polling for token: %v\n", err)
+		return
+	}
+
+	if err := saveToken(authResponse.AccessToken); err != nil {
+		fmt.Printf("Error saving token: %v\n", err)
+		return
+	}
 }
 
 func main() {
@@ -271,7 +299,6 @@ func main() {
 	if result == false {
 		fmt.Println("Token not found or invalid! User must authenticate again.")
 
-		fmt.Println("Requesting user code...")
 		deviceCodeResp, err := requestUserCode()
 		if err != nil {
 			fmt.Printf("Error requesting user code: %v\n", err)
@@ -283,7 +310,6 @@ func main() {
 		fmt.Printf("Enter the code: %s\n", deviceCodeResp.UserCode)
 
 		// Step 3: Poll for Access Token
-		fmt.Println("Waiting for user authentication...")
 		authResponse, err := checkAuth(deviceCodeResp)
 		if err != nil {
 			fmt.Printf("Error polling for token: %v\n", err)
@@ -294,8 +320,6 @@ func main() {
 			fmt.Printf("Error saving token: %v\n", err)
 			return
 		}
-
-		fmt.Println("Token saved!")
 	} else {
 		fmt.Printf("Valid token found: %s\n", token)
 	}
@@ -317,6 +341,10 @@ func main() {
 
 		// Trim whitespace
 		input = strings.TrimSpace(input)
+
+		if input == "login" {
+			login()
+		}
 
 		// Exit condition
 		if strings.ToLower(input) == "exit" {
