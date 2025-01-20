@@ -56,18 +56,18 @@ func requestUserCode() (*DeviceCodeResponse, error) {
 
 	resp, err := http.Post(deviceCodeEndpoint, "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		return nil, fmt.Errorf("\033[91mfailed to send request: %w\033[0m", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("received non-OK HTTP status: %s", resp.Status)
+		return nil, fmt.Errorf("\033[91mreceived non-OK HTTP status: %s\033[0m", resp.Status)
 	}
 
 	var deviceCodeResp DeviceCodeResponse
 	err = json.NewDecoder(resp.Body).Decode(&deviceCodeResp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, fmt.Errorf("\033[91mfailed to decode response: %w\033[0m", err)
 	}
 
 	return &deviceCodeResp, nil
@@ -80,23 +80,23 @@ func checkAuth(deviceCodeResp *DeviceCodeResponse) (*CheckAuthResponse, error) {
 		// Send GET request
 		resp, err := http.Get(checkURL)
 		if err != nil {
-			return nil, fmt.Errorf("failed to make request: %w", err)
+			return nil, fmt.Errorf("\033[91mfailed to make request: %w\033[0m", err)
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("received non-OK HTTP status: %s", resp.Status)
+			return nil, fmt.Errorf("\033[91mreceived non-OK HTTP status: %s\033[0m", resp.Status)
 		}
 
 		// Decode JSON response
 		var authResponse CheckAuthResponse
 		if err := json.NewDecoder(resp.Body).Decode(&authResponse); err != nil {
-			return nil, fmt.Errorf("failed to decode response: %w", err)
+			return nil, fmt.Errorf("\033[91mfailed to decode response: %w\033[0m", err)
 		}
 
 		// Check the state
 		if authResponse.AccessState == "allowed" {
-			fmt.Println("Login Successful!")
+			fmt.Printf("\033[92mLogin successful!\033[0m\n")
 			return &authResponse, nil
 		}
 
@@ -110,66 +110,66 @@ func saveToken(token string) error {
 
 	file, err := os.Create("userConfig.json")
 	if err != nil {
-		return fmt.Errorf("Failed to create file: %w", err)
+		return fmt.Errorf("\033[91mFailed to create file: %w\033[0m", err)
 	}
 
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
 	if err := encoder.Encode(data); err != nil {
-		return fmt.Errorf("Failed to write token to file: %w", err)
+		return fmt.Errorf("\033[91mFailed to write token to file: %w\033[0m", err)
 	}
 
 	return nil
 }
 
-func loadToken() (bool, string) {
+func loadToken() bool {
 	file, err := os.Open("userConfig.json")
 
 	if err != nil {
-		return false, ""
+		return false
 	}
 	defer file.Close()
 
 	var data map[string]string
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&data); err != nil {
-		return false, ""
+		return false
 	}
 
 	authToken := data["authToken"]
 
 	if authToken == "" {
-		return false, ""
+		return false
 	}
 
 	result := parseToken(authToken)
 	if result.Errored {
-		fmt.Println("Error:", result.Error)
-		return false, ""
+		fmt.Printf("\n\033[91mError: %s\033[0m\n", result.Error)
+		return false
 	}
 
 	expiration, ok := result.Data.Claims["exp"].(float64)
 	if !ok {
-		fmt.Println("Error: 'exp' claim is missing or not a float64")
-		return false, ""
+		fmt.Printf("\n\033[91mError: 'exp' claim is missing or not a float64\033[0m\n")
+		return false
 	}
 
 	expTime := time.Unix(int64(expiration), 0)
 
 	if time.Now().After(expTime) {
-		fmt.Println("Error: Token Expired!")
-		return false, ""
+		fmt.Printf("\n\033[91mError: Token Expired!\033[0m\n")
+		return false
 	}
 
 	verifyResult := verifyToken(authToken)
 
 	if verifyResult == false {
-		fmt.Println("Error: Token Invalid!")
-		return false, ""
+		fmt.Printf("\n\033[91mError: Token Invalid!\033[0m\n")
+		return false
 	}
 
-	return true, authToken
+	return true
 }
 
 func parseToken(token string) TokenParseResult {
@@ -233,7 +233,7 @@ func decodeBase64URL(data string) (string, error) {
 func verifyToken(authToken string) bool {
 	req, err := http.NewRequest("GET", "https://api.jamlaunch.com/projects", nil)
 	if err != nil {
-		log.Fatalf("Error creating request: %v", err)
+		log.Fatalf("\033[91mError creating request: %v\033[0m", err)
 		return false
 	}
 
@@ -242,20 +242,20 @@ func verifyToken(authToken string) bool {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("Error making request: %v", err)
+		log.Fatalf("\033[91mError making request: %v\033[0m", err)
 		return false
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("Error reading response: %v", err)
+		log.Fatalf("\033[91mError reading response: %v\033[0m", err)
 		return false
 	}
 
 	var data map[string]interface{}
 	if err := json.Unmarshal(body, &data); err != nil {
-		log.Fatalf("Error unmarshaling JSON: %v", err)
+		log.Fatalf("\033[91mError unmarshaling JSON: %v\033[0m", err)
 	}
 
 	if _, exists := data["projects"]; exists {
@@ -266,25 +266,25 @@ func verifyToken(authToken string) bool {
 }
 
 func login() {
-	fmt.Println("User has requested a new login token...")
+	fmt.Println("Requesting new token...")
 
 	deviceCodeResp, err := requestUserCode()
 	if err != nil {
-		fmt.Printf("Error requesting user code: %v\n", err)
+		fmt.Printf("\033[91mError requesting user code: %v\033[0m\n", err)
 		return
 	}
 
-	fmt.Printf("Visit: %s?user_code=%s\n", userAuthEndpoint, deviceCodeResp.UserCode)
-	fmt.Printf("Enter the code: %s\n", deviceCodeResp.UserCode)
+	fmt.Printf("\033[93mVisit:\033[0m %s?user_code=%s\n", userAuthEndpoint, deviceCodeResp.UserCode)
+	fmt.Printf("\033[93mEnter the code:\033[0m %s\n", deviceCodeResp.UserCode)
 
 	authResponse, err := checkAuth(deviceCodeResp)
 	if err != nil {
-		fmt.Printf("Error polling for token: %v\n", err)
+		fmt.Printf("\033[91mError polling for token: %v\033[0m\n", err)
 		return
 	}
 
 	if err := saveToken(authResponse.AccessToken); err != nil {
-		fmt.Printf("Error saving token: %v\n", err)
+		fmt.Printf("\033[91mError saving token: %v\033[0m\n", err)
 		return
 	}
 }
@@ -293,35 +293,35 @@ func main() {
 	// Step 1: Request Device Code
 	fmt.Println("Welcome to the JamLaunch CLI!")
 
-	fmt.Println("Checking Token...")
-	result, token := loadToken()
+	fmt.Print("Checking token...")
+	result := loadToken()
 
 	if result == false {
-		fmt.Println("Token not found or invalid! User must authenticate again.")
+		fmt.Println("\033[91mToken not found or invalid! User must authenticate again.")
 
 		deviceCodeResp, err := requestUserCode()
 		if err != nil {
-			fmt.Printf("Error requesting user code: %v\n", err)
+			fmt.Printf("\033[91mError requesting user code: %v\033[0m\n", err)
 			return
 		}
 
 		// Step 2: Display User Instructions
-		fmt.Printf("Visit: %s?user_code=%s\n", userAuthEndpoint, deviceCodeResp.UserCode)
-		fmt.Printf("Enter the code: %s\n", deviceCodeResp.UserCode)
+		fmt.Printf("\033[93mVisit:\033[0m %s?user_code=%s\n", userAuthEndpoint, deviceCodeResp.UserCode)
+		fmt.Printf("\033[93mEnter the code:\033[0m %s\n", deviceCodeResp.UserCode)
 
 		// Step 3: Poll for Access Token
 		authResponse, err := checkAuth(deviceCodeResp)
 		if err != nil {
-			fmt.Printf("Error polling for token: %v\n", err)
+			fmt.Printf("\033[91mError polling for token: %v\033[0m\n", err)
 			return
 		}
 
 		if err := saveToken(authResponse.AccessToken); err != nil {
-			fmt.Printf("Error saving token: %v\n", err)
+			fmt.Printf("\033[91mError saving token: %v\033[0m\n", err)
 			return
 		}
 	} else {
-		fmt.Printf("Valid token found: %s\n", token)
+		fmt.Printf("\033[92mLogin successful!\033[0m\n")
 	}
 
 	reader := bufio.NewReader(os.Stdin)
@@ -335,24 +335,20 @@ func main() {
 		// Read user input
 		input, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Println("Error reading input:", err)
+			fmt.Printf("\033[91mError reading input: %s\033[0m\n", err)
 			continue
 		}
 
 		// Trim whitespace
 		input = strings.TrimSpace(input)
 
-		if input == "login" {
+		if strings.ToLower(input) == "login" {
 			login()
-		}
-
-		// Exit condition
-		if strings.ToLower(input) == "exit" {
+		} else if strings.ToLower(input) == "exit" {
 			fmt.Println("Goodbye!")
 			break
+		} else {
+			fmt.Printf("\033[31m%s is not a valid command!\033[0m\n", input)
 		}
-
-		// Display the user's input
-		fmt.Println("You said:", input)
 	}
 }
