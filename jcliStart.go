@@ -15,7 +15,7 @@ func main() {
 	result, token := loadToken()
 
 	if !result {
-		fmt.Println("\033[91mToken not found or invalid! User must authenticate again.")
+		fmt.Println("\033[91mToken not found or invalid! User must authenticate again.\033[0m")
 
 		deviceCodeResp, err := requestUserCode()
 		if err != nil {

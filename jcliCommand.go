@@ -7,6 +7,14 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/jedib0t/go-pretty/table"
+)
+
+var (
+	colProjectIndex = "#"
+	colProjectName  = "Project Name"
+	rowHeader       = table.Row{colProjectIndex, colProjectName}
 )
 
 func login() {
@@ -66,14 +74,20 @@ func projects(authToken string) bool {
 		if len(projects) == 0 {
 			fmt.Println("You currently do not have any projects!")
 		} else {
-			fmt.Println("List of current projects:")
+			t := table.NewWriter()
+			tTemp := table.Table{}
+			tTemp.Render()
+			t.AppendHeader(rowHeader)
+			t.SetTitle("Current Projects")
+			t.SetStyle(table.StyleColoredDark)
 
 			for _, project := range projects {
 				if projMap, ok := project.(map[string]interface{}); ok {
-					fmt.Printf("ID: %v, Name: %v\n",
-						projMap["id"], projMap["project_name"])
+					t.AppendRow(table.Row{projMap["id"], projMap["project_name"]})
 				}
 			}
+
+			fmt.Println(t.Render())
 		}
 	} else {
 		log.Printf("\033[91mError: projects is not an array!\033[0m\n")
@@ -114,6 +128,6 @@ func help(input string) {
 		fmt.Println("")
 		fmt.Println("Running this command will prompt the user to generate a new authentication token and replace the old one regardles if it is valid or not.")
 	} else {
-		fmt.Println("Command formatted incorrectly. Use 'HELP' or 'HELP command-name'.")
+		fmt.Printf("\033[31mCommand formatted incorrectly. Use 'HELP' or 'HELP command-name'.\033[0m\n")
 	}
 }
