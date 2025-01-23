@@ -1,0 +1,167 @@
+package main
+
+import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+)
+
+type TokenData struct {
+	Header    map[string]interface{}
+	Claims    map[string]interface{}
+	Signature string
+}
+
+type TokenParseResult struct {
+	Data    *TokenData
+	Errored bool
+	Error   string
+}
+
+func loadToken() (bool, string) {
+	file, err := os.Open("userConfig.json")
+
+	if err != nil {
+		return false, ""
+	}
+	defer file.Close()
+
+	var data map[string]string
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&data); err != nil {
+		return false, ""
+	}
+
+	authToken := data["authToken"]
+
+	if authToken == "" {
+		return false, ""
+	}
+
+	result := parseToken(authToken)
+	if result.Errored {
+		fmt.Printf("\n\033[91mError: %s\033[0m\n", result.Error)
+		return false, ""
+	}
+
+	expiration, ok := result.Data.Claims["exp"].(float64)
+	if !ok {
+		fmt.Printf("\n\033[91mError: 'exp' claim is missing or not a float64\033[0m\n")
+		return false, ""
+	}
+
+	expTime := time.Unix(int64(expiration), 0)
+
+	if time.Now().After(expTime) {
+		fmt.Printf("\n\033[91mError: Token Expired!\033[0m\n")
+		return false, ""
+	}
+
+	verifyResult := verifyToken(authToken)
+
+	if !verifyResult {
+		fmt.Printf("\n\033[91mError: Token Invalid!\033[0m\n")
+		return false, ""
+	}
+
+	return true, authToken
+}
+
+func parseToken(token string) TokenParseResult {
+	var result TokenParseResult
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		result.Errored = true
+		result.Error = "Invalid JWT token format"
+		return result
+	}
+
+	tkn := &TokenData{}
+
+	// Parse Header
+	headerJSON, err := decodeBase64URL(parts[0])
+	if err != nil {
+		result.Errored = true
+		result.Error = "Failed to decode JWT header: " + err.Error()
+		return result
+	}
+	if err := json.Unmarshal([]byte(headerJSON), &tkn.Header); err != nil {
+		result.Errored = true
+		result.Error = "Failed to parse JWT header: " + err.Error()
+		return result
+	}
+
+	// Parse Claims
+	claimsJSON, err := decodeBase64URL(parts[1])
+	if err != nil {
+		result.Errored = true
+		result.Error = "Failed to decode JWT claims: " + err.Error()
+		return result
+	}
+	if err := json.Unmarshal([]byte(claimsJSON), &tkn.Claims); err != nil {
+		result.Errored = true
+		result.Error = "Failed to parse JWT claims: " + err.Error()
+		return result
+	}
+
+	// Parse Signature
+	sig, err := decodeBase64URL(parts[2])
+	if err != nil || len(sig) == 0 {
+		result.Errored = true
+		result.Error = "Failed to decode JWT signature: " + err.Error()
+		return result
+	}
+	tkn.Signature = parts[2]
+
+	result.Data = tkn
+	return result
+}
+
+func decodeBase64URL(data string) (string, error) {
+	decoded, err := base64.RawURLEncoding.DecodeString(data)
+	if err != nil {
+		return "", err
+	}
+	return string(decoded), nil
+}
+
+func verifyToken(authToken string) bool {
+	req, err := http.NewRequest("GET", "https://api.jamlaunch.com/projects", nil)
+	if err != nil {
+		log.Fatalf("\033[91mError creating request: %v\033[0m", err)
+		return false
+	}
+
+	req.Header.Add("Authorization", "Bearer "+authToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("\033[91mError making request: %v\033[0m", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("\033[91mError reading response: %v\033[0m", err)
+		return false
+	}
+
+	var data map[string]interface{}
+	if err := json.Unmarshal(body, &data); err != nil {
+		log.Fatalf("\033[91mError unmarshaling JSON: %v\033[0m", err)
+	}
+
+	if _, exists := data["projects"]; exists {
+		return true
+	} else {
+		return false
+	}
+}
