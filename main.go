@@ -123,53 +123,53 @@ func saveToken(token string) error {
 	return nil
 }
 
-func loadToken() bool {
+func loadToken() (bool, string) {
 	file, err := os.Open("userConfig.json")
 
 	if err != nil {
-		return false
+		return false, ""
 	}
 	defer file.Close()
 
 	var data map[string]string
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&data); err != nil {
-		return false
+		return false, ""
 	}
 
 	authToken := data["authToken"]
 
 	if authToken == "" {
-		return false
+		return false, ""
 	}
 
 	result := parseToken(authToken)
 	if result.Errored {
 		fmt.Printf("\n\033[91mError: %s\033[0m\n", result.Error)
-		return false
+		return false, ""
 	}
 
 	expiration, ok := result.Data.Claims["exp"].(float64)
 	if !ok {
 		fmt.Printf("\n\033[91mError: 'exp' claim is missing or not a float64\033[0m\n")
-		return false
+		return false, ""
 	}
 
 	expTime := time.Unix(int64(expiration), 0)
 
 	if time.Now().After(expTime) {
 		fmt.Printf("\n\033[91mError: Token Expired!\033[0m\n")
-		return false
+		return false, ""
 	}
 
 	verifyResult := verifyToken(authToken)
 
 	if verifyResult == false {
 		fmt.Printf("\n\033[91mError: Token Invalid!\033[0m\n")
-		return false
+		return false, ""
 	}
 
-	return true
+	return true, authToken
 }
 
 func parseToken(token string) TokenParseResult {
@@ -289,12 +289,62 @@ func login() {
 	}
 }
 
+func projects(authToken string) bool {
+	req, err := http.NewRequest("GET", "https://api.jamlaunch.com/projects", nil)
+	if err != nil {
+		log.Fatalf("\033[91mError creating request: %v\033[0m", err)
+		return false
+	}
+
+	req.Header.Add("Authorization", "Bearer "+authToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("\033[91mError making request: %v\033[0m", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("\033[91mError reading response: %v\033[0m", err)
+		return false
+	}
+
+	var data map[string]interface{}
+	if err := json.Unmarshal(body, &data); err != nil {
+		log.Fatalf("\033[91mError unmarshaling JSON: %v\033[0m", err)
+		return false
+	}
+
+	if projects, ok := data["projects"].([]interface{}); ok {
+		if len(projects) == 0 {
+			fmt.Println("You currently do not have any projects!")
+		} else {
+			fmt.Println("List of current projects:")
+
+			for _, project := range projects {
+				if projMap, ok := project.(map[string]interface{}); ok {
+					fmt.Printf("ID: %v, Name: %v\n",
+						projMap["id"], projMap["project_name"])
+				}
+			}
+		}
+	} else {
+		log.Printf("\033[91mError: projects is not an array!\033[0m\n")
+		return false
+	}
+
+	return true
+}
+
 func main() {
 	// Step 1: Request Device Code
 	fmt.Println("Welcome to the JamLaunch CLI!")
 
 	fmt.Print("Checking token...")
-	result := loadToken()
+	result, token := loadToken()
 
 	if result == false {
 		fmt.Println("\033[91mToken not found or invalid! User must authenticate again.")
@@ -344,6 +394,8 @@ func main() {
 
 		if strings.ToLower(input) == "login" {
 			login()
+		} else if strings.ToLower(input) == "projects" {
+			projects(token)
 		} else if strings.ToLower(input) == "exit" {
 			fmt.Println("Goodbye!")
 			break
