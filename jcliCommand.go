@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 )
 
 func login() {
@@ -80,4 +81,39 @@ func projects(authToken string) bool {
 	}
 
 	return true
+}
+
+func help(input string) {
+	parts := strings.Fields(input)
+
+	if len(parts) == 1 && strings.ToLower(parts[0]) == "help" {
+		fmt.Println("For more information on a specific command, type HELP command-name")
+		fmt.Println("HELP        Provides Help information for Jam Launch CLI commands.")
+		fmt.Println("LOGIN       Prompts the user to log in again.")
+		fmt.Println("PROJECTS    Displays a list of the users current projects.")
+	} else if len(parts) == 2 && strings.ToLower(parts[0]) == "help" && strings.ToLower(parts[1]) == "projects" {
+		fmt.Println("PROJECTS command details:")
+		fmt.Println("Displays a list of the user's current projects.")
+		fmt.Println("")
+		fmt.Println("PROJECTS (No Parameters)")
+		fmt.Println("")
+		fmt.Println("This command will display the id and name of each project in a table format.")
+	} else if len(parts) == 2 && strings.ToLower(parts[0]) == "help" && strings.ToLower(parts[1]) == "help" {
+		fmt.Println("HELP command details:")
+		fmt.Println("Provides Help information for Jam Launch CLI commands.")
+		fmt.Println("")
+		fmt.Println("HELP (No Parameters)")
+		fmt.Println("HELP [Command Name]")
+		fmt.Println("")
+		fmt.Println("Running help with parameters will display detailed help information for the command specified by the parameter.")
+	} else if len(parts) == 2 && strings.ToLower(parts[0]) == "help" && strings.ToLower(parts[1]) == "login" {
+		fmt.Println("LOGIN command details:")
+		fmt.Println("Prompts the user to log in again.")
+		fmt.Println("")
+		fmt.Println("LOGIN (No Parameters)")
+		fmt.Println("")
+		fmt.Println("Running this command will prompt the user to generate a new authentication token and replace the old one regardles if it is valid or not.")
+	} else {
+		fmt.Println("Command formatted incorrectly. Use 'HELP' or 'HELP command-name'.")
+	}
 }

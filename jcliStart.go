@@ -64,6 +64,8 @@ func main() {
 			login()
 		} else if strings.ToLower(input) == "projects" {
 			projects(token)
+		} else if len(input) >= 4 && strings.ToLower(input[:4]) == "help" {
+			help(input)
 		} else if strings.ToLower(input) == "exit" {
 			fmt.Println("Goodbye!")
 			break
