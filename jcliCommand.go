@@ -91,6 +91,7 @@ func projects(authToken string) bool {
 		}
 	} else {
 		log.Printf("\033[91mError: projects is not an array!\033[0m\n")
+		log.Printf("\033[91mPlease visit https://app.jamlaunch.com/projects and try again!\033[0m\n")
 		return false
 	}
 
