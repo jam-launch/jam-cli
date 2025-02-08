@@ -3,7 +3,8 @@ name: goreleaser
 on:
   push:
     # Runs when a tag is present in a pushed commit
-    tags: = "*"
+    tags: 
+      - "*"
 
 permissions:
   contents: write
