@@ -79,55 +79,80 @@ func projects(authToken string) bool {
 	return true
 }
 
-func projects_id(authToken string, id string) bool {
-	var apiUrl = "https://api.jamlaunch.com/projects/" + id
+func projects_id(authToken string, name string) bool {
+	var apiUrlName = "https://api.jamlaunch.com/projects"
 
-	data, success := fetch(apiUrl, authToken)
+	nameData, successName := fetch(apiUrlName, authToken)
 
-	if success {
-		if data != nil {
-			fmt.Printf("\033[93mProject Name:\033[0m %s\n", data["project_name"].(string))
-			fmt.Printf("\033[93mCreated At:\033[0m %s\n", data["created_at"].(string)[:10])
-			fmt.Printf("\033[93mProject Id:\033[0m %s\n", data["id"].(string))
-			fmt.Printf("\033[93mActive:\033[0m %t\n", data["active"].(bool))
-			fmt.Println("")
+	if successName && nameData != nil {
+		var projectId string
 
-			if members, ok := data["members"].([]interface{}); ok && len(members) > 0 {
-				t := table.NewWriter()
-				tTemp := table.Table{}
-				tTemp.Render()
-				t.AppendHeader(membersHeader)
-				t.SetTitle("Current Members")
-				t.SetStyle(table.StyleColoredDark)
+		if projects, ok := nameData["projects"].([]interface{}); ok {
+			for _, p := range projects {
+				project := p.(map[string]interface{})
 
-				for _, member := range members {
-					if memMap, ok := member.(map[string]interface{}); ok {
-						t.AppendRow(table.Row{memMap["username"], memMap["level"]})
-					}
+				if project["project_name"].(string) == name {
+					projectId = project["id"].(string)
+					break
 				}
-
-				fmt.Println(t.Render())
-			}
-
-			if releases, ok := data["releases"].([]interface{}); ok && len(releases) > 0 {
-				fmt.Println("")
-
-				t := table.NewWriter()
-				tTemp := table.Table{}
-				tTemp.Render()
-				t.AppendHeader(membersHeader)
-				t.SetTitle("Current Releases")
-				t.SetStyle(table.StyleColoredDark)
-
-				for _, release := range releases {
-					if relMap, ok := release.(map[string]interface{}); ok {
-						t.AppendRow(table.Row{relMap["name"], relMap["date"]}) // Change this
-					}
-				}
-
-				fmt.Println(t.Render())
 			}
 		}
+
+		var apiUrlId = "https://api.jamlaunch.com/projects/" + projectId
+
+		data, successId := fetch(apiUrlId, authToken)
+
+		if successId {
+			if data != nil && data["project_name"] != nil {
+				fmt.Printf("\033[93mProject Name:\033[0m %s\n", data["project_name"].(string))
+				fmt.Printf("\033[93mCreated At:\033[0m %s\n", data["created_at"].(string)[:10])
+				fmt.Printf("\033[93mProject Id:\033[0m %s\n", data["id"].(string))
+				fmt.Printf("\033[93mActive:\033[0m %t\n", data["active"].(bool))
+				fmt.Println("")
+
+				if members, ok := data["members"].([]interface{}); ok && len(members) > 0 {
+					t := table.NewWriter()
+					tTemp := table.Table{}
+					tTemp.Render()
+					t.AppendHeader(membersHeader)
+					t.SetTitle("Current Members")
+					t.SetStyle(table.StyleColoredDark)
+
+					for _, member := range members {
+						if memMap, ok := member.(map[string]interface{}); ok {
+							t.AppendRow(table.Row{memMap["username"], memMap["level"]})
+						}
+					}
+
+					fmt.Println(t.Render())
+				}
+
+				if releases, ok := data["releases"].([]interface{}); ok && len(releases) > 0 {
+					fmt.Println("")
+
+					t := table.NewWriter()
+					tTemp := table.Table{}
+					tTemp.Render()
+					t.AppendHeader(membersHeader)
+					t.SetTitle("Current Releases")
+					t.SetStyle(table.StyleColoredDark)
+
+					for _, release := range releases {
+						if relMap, ok := release.(map[string]interface{}); ok {
+							t.AppendRow(table.Row{relMap["name"], relMap["date"]}) // Change this
+						}
+					}
+
+					fmt.Println(t.Render())
+				}
+			} else {
+				fmt.Printf("\033[91mError: Project not found!\033[0m\n")
+			}
+		} else {
+			fmt.Printf("\033[91mError: Unable to retrieve project data!\033[0m\n")
+		}
+	} else {
+		fmt.Printf("\033[91mError: Unable to retrieve projects!\033[0m\n")
 	}
 
 	return true

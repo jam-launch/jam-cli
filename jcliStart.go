@@ -80,6 +80,4 @@ func main() {
 	}
 }
 
-/*
-{"id":"dWgIkNTY","configs":[],"members":[{"username":"Christian2147","level":"creator","payer":true}],"channels":[],"vars":[],"project_name":"test-project","active":true,"created_at":"2025-01-23T22:00:33.932Z","releases":[]}
-*/
+// https://admin-api.jamlaunch.com/account/transactions
