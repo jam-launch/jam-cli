@@ -62,8 +62,13 @@ func main() {
 
 		if strings.ToLower(input) == "login" {
 			login()
-		} else if strings.ToLower(input) == "projects" {
-			projects(token)
+		} else if len(input) >= 8 && strings.ToLower(input[:8]) == "projects" {
+			parts := strings.Fields(input)
+			if len(parts) == 1 && strings.ToLower(parts[0]) == "projects" {
+				projects(token)
+			} else {
+				projects_id(token, parts[1])
+			}
 		} else if len(input) >= 4 && strings.ToLower(input[:4]) == "help" {
 			help(input)
 		} else if strings.ToLower(input) == "exit" {
@@ -74,3 +79,7 @@ func main() {
 		}
 	}
 }
+
+/*
+{"id":"dWgIkNTY","configs":[],"members":[{"username":"Christian2147","level":"creator","payer":true}],"channels":[],"vars":[],"project_name":"test-project","active":true,"created_at":"2025-01-23T22:00:33.932Z","releases":[]}
+*/
