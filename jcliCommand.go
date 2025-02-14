@@ -1,11 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"strings"
 
 	"github.com/jedib0t/go-pretty/table"
@@ -48,57 +45,35 @@ func login() {
 }
 
 func projects(authToken string) bool {
-	req, err := http.NewRequest("GET", "https://api.jamlaunch.com/projects", nil)
-	if err != nil {
-		log.Fatalf("\033[91mError creating request: %v\033[0m", err)
-		return false
-	}
+	var apiUrl = "https://api.jamlaunch.com/projects"
 
-	req.Header.Add("Authorization", "Bearer "+authToken)
+	data, success := fetch(apiUrl, authToken)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatalf("\033[91mError making request: %v\033[0m", err)
-		return false
-	}
-	defer resp.Body.Close()
+	if success {
+		if projects, ok := data["projects"].([]interface{}); ok {
+			if len(projects) == 0 {
+				fmt.Println("You currently do not have any projects!")
+			} else {
+				t := table.NewWriter()
+				tTemp := table.Table{}
+				tTemp.Render()
+				t.AppendHeader(projectHeader)
+				t.SetTitle("Current Projects")
+				t.SetStyle(table.StyleColoredDark)
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalf("\033[91mError reading response: %v\033[0m", err)
-		return false
-	}
-
-	var data map[string]interface{}
-	if err := json.Unmarshal(body, &data); err != nil {
-		log.Fatalf("\033[91mError unmarshaling JSON: %v\033[0m", err)
-		return false
-	}
-
-	if projects, ok := data["projects"].([]interface{}); ok {
-		if len(projects) == 0 {
-			fmt.Println("You currently do not have any projects!")
-		} else {
-			t := table.NewWriter()
-			tTemp := table.Table{}
-			tTemp.Render()
-			t.AppendHeader(projectHeader)
-			t.SetTitle("Current Projects")
-			t.SetStyle(table.StyleColoredDark)
-
-			for _, project := range projects {
-				if projMap, ok := project.(map[string]interface{}); ok {
-					t.AppendRow(table.Row{projMap["id"], projMap["project_name"]})
+				for _, project := range projects {
+					if projMap, ok := project.(map[string]interface{}); ok {
+						t.AppendRow(table.Row{projMap["id"], projMap["project_name"]})
+					}
 				}
-			}
 
-			fmt.Println(t.Render())
+				fmt.Println(t.Render())
+			}
+		} else {
+			log.Printf("\033[91mError: projects is not an array!\033[0m\n")
+			log.Printf("\033[91mPlease visit https://app.jamlaunch.com/projects and try again!\033[0m\n")
+			return false
 		}
-	} else {
-		log.Printf("\033[91mError: projects is not an array!\033[0m\n")
-		log.Printf("\033[91mPlease visit https://app.jamlaunch.com/projects and try again!\033[0m\n")
-		return false
 	}
 
 	return true
@@ -107,74 +82,51 @@ func projects(authToken string) bool {
 func projects_id(authToken string, id string) bool {
 	var apiUrl = "https://api.jamlaunch.com/projects/" + id
 
-	req, err := http.NewRequest("GET", apiUrl, nil)
-	if err != nil {
-		log.Fatalf("\033[91mError creating request: %v\033[0m", err)
-		return false
-	}
-	req.Header.Add("Authorization", "Bearer "+authToken)
+	data, success := fetch(apiUrl, authToken)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatalf("\033[91mError making request: %v\033[0m", err)
-		return false
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalf("\033[91mError reading response: %v\033[0m", err)
-		return false
-	}
-
-	var data map[string]interface{}
-	if err := json.Unmarshal(body, &data); err != nil {
-		log.Fatalf("\033[91mError unmarshaling JSON: %v\033[0m", err)
-		return false
-	}
-
-	if data != nil {
-		fmt.Printf("\033[93mProject Name:\033[0m %s\n", data["project_name"].(string))
-		fmt.Printf("\033[93mCreated At:\033[0m %s\n", data["created_at"].(string)[:10])
-		fmt.Printf("\033[93mProject Id:\033[0m %s\n", data["id"].(string))
-		fmt.Printf("\033[93mActive:\033[0m %t\n", data["active"].(bool))
-		fmt.Println("")
-
-		if members, ok := data["members"].([]interface{}); ok && len(members) > 0 {
-			t := table.NewWriter()
-			tTemp := table.Table{}
-			tTemp.Render()
-			t.AppendHeader(membersHeader)
-			t.SetTitle("Current Members")
-			t.SetStyle(table.StyleColoredDark)
-
-			for _, member := range members {
-				if memMap, ok := member.(map[string]interface{}); ok {
-					t.AppendRow(table.Row{memMap["username"], memMap["level"]})
-				}
-			}
-
-			fmt.Println(t.Render())
-		}
-
-		if releases, ok := data["releases"].([]interface{}); ok && len(releases) > 0 {
+	if success {
+		if data != nil {
+			fmt.Printf("\033[93mProject Name:\033[0m %s\n", data["project_name"].(string))
+			fmt.Printf("\033[93mCreated At:\033[0m %s\n", data["created_at"].(string)[:10])
+			fmt.Printf("\033[93mProject Id:\033[0m %s\n", data["id"].(string))
+			fmt.Printf("\033[93mActive:\033[0m %t\n", data["active"].(bool))
 			fmt.Println("")
 
-			t := table.NewWriter()
-			tTemp := table.Table{}
-			tTemp.Render()
-			t.AppendHeader(membersHeader)
-			t.SetTitle("Current Releases")
-			t.SetStyle(table.StyleColoredDark)
+			if members, ok := data["members"].([]interface{}); ok && len(members) > 0 {
+				t := table.NewWriter()
+				tTemp := table.Table{}
+				tTemp.Render()
+				t.AppendHeader(membersHeader)
+				t.SetTitle("Current Members")
+				t.SetStyle(table.StyleColoredDark)
 
-			for _, release := range releases {
-				if relMap, ok := release.(map[string]interface{}); ok {
-					t.AppendRow(table.Row{relMap["name"], relMap["date"]}) // Change this
+				for _, member := range members {
+					if memMap, ok := member.(map[string]interface{}); ok {
+						t.AppendRow(table.Row{memMap["username"], memMap["level"]})
+					}
 				}
+
+				fmt.Println(t.Render())
 			}
 
-			fmt.Println(t.Render())
+			if releases, ok := data["releases"].([]interface{}); ok && len(releases) > 0 {
+				fmt.Println("")
+
+				t := table.NewWriter()
+				tTemp := table.Table{}
+				tTemp.Render()
+				t.AppendHeader(membersHeader)
+				t.SetTitle("Current Releases")
+				t.SetStyle(table.StyleColoredDark)
+
+				for _, release := range releases {
+					if relMap, ok := release.(map[string]interface{}); ok {
+						t.AppendRow(table.Row{relMap["name"], relMap["date"]}) // Change this
+					}
+				}
+
+				fmt.Println(t.Render())
+			}
 		}
 	}
 

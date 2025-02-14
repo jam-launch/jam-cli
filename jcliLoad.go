@@ -4,9 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -132,35 +129,16 @@ func decodeBase64URL(data string) (string, error) {
 }
 
 func verifyToken(authToken string) bool {
-	req, err := http.NewRequest("GET", "https://api.jamlaunch.com/projects", nil)
-	if err != nil {
-		log.Fatalf("\033[91mError creating request: %v\033[0m", err)
-		return false
-	}
+	var apiUrl = "https://api.jamlaunch.com/projects"
 
-	req.Header.Add("Authorization", "Bearer "+authToken)
+	data, success := fetch(apiUrl, authToken)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatalf("\033[91mError making request: %v\033[0m", err)
-		return false
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalf("\033[91mError reading response: %v\033[0m", err)
-		return false
-	}
-
-	var data map[string]interface{}
-	if err := json.Unmarshal(body, &data); err != nil {
-		log.Fatalf("\033[91mError unmarshaling JSON: %v\033[0m", err)
-	}
-
-	if _, exists := data["projects"]; exists {
-		return true
+	if success {
+		if _, exists := data["projects"]; exists {
+			return true
+		} else {
+			return false
+		}
 	} else {
 		return false
 	}
