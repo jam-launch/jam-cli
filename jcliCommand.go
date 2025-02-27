@@ -158,6 +158,64 @@ func projects_id(authToken string, name string) bool {
 	return true
 }
 
+func projects_sessions(authToken string, name string) bool {
+	var apiUrlName = "https://api.jamlaunch.com/projects"
+
+	nameData, successName := fetch(apiUrlName, authToken)
+
+	if successName && nameData != nil {
+		var projectId string
+
+		if projects, ok := nameData["projects"].([]interface{}); ok {
+			for _, p := range projects {
+				project := p.(map[string]interface{})
+
+				if project["project_name"].(string) == name {
+					projectId = project["id"].(string)
+					break
+				}
+			}
+		}
+
+		var apiUrlSessions = "https://api.jamlaunch.com/projects/" + projectId + "/sessions"
+
+		fmt.Printf("Command: %s\n", apiUrlSessions)
+	} else {
+		fmt.Printf("\033[91mError: Unable to retrieve projects!\033[0m\n")
+	}
+
+	return true
+}
+
+func projects_sessions_with_id(authToken string, name string, sessionId string) bool {
+	var apiUrlName = "https://api.jamlaunch.com/projects"
+
+	nameData, successName := fetch(apiUrlName, authToken)
+
+	if successName && nameData != nil {
+		var projectId string
+
+		if projects, ok := nameData["projects"].([]interface{}); ok {
+			for _, p := range projects {
+				project := p.(map[string]interface{})
+
+				if project["project_name"].(string) == name {
+					projectId = project["id"].(string)
+					break
+				}
+			}
+		}
+
+		var apiUrlSessionsWithId = "https://api.jamlaunch.com/projects/" + projectId + "/sessions/" + sessionId
+
+		fmt.Printf("Command: %s\n", apiUrlSessionsWithId)
+	} else {
+		fmt.Printf("\033[91mError: Unable to retrieve projects!\033[0m\n")
+	}
+
+	return true
+}
+
 func help(input string) {
 	parts := strings.Fields(input)
 
@@ -171,8 +229,10 @@ func help(input string) {
 		fmt.Println("Displays a list of the user's current projects.")
 		fmt.Println("")
 		fmt.Println("PROJECTS (No Parameters)")
+		fmt.Println("PROJECTS (Project Name)")
 		fmt.Println("")
 		fmt.Println("This command will display the id and name of each project in a table format.")
+		fmt.Println("Running projects with parameters will display more specific details about a specific project.")
 	} else if len(parts) == 2 && strings.ToLower(parts[0]) == "help" && strings.ToLower(parts[1]) == "help" {
 		fmt.Println("HELP command details:")
 		fmt.Println("Provides Help information for Jam Launch CLI commands.")

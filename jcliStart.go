@@ -66,8 +66,12 @@ func main() {
 			parts := strings.Fields(input)
 			if len(parts) == 1 && strings.ToLower(parts[0]) == "projects" {
 				projects(token)
-			} else {
+			} else if len(parts) == 2 {
 				projects_id(token, parts[1])
+			} else if len(parts) == 3 {
+				projects_sessions(token, parts[1])
+			} else {
+				projects_sessions_with_id(token, parts[1], parts[3])
 			}
 		} else if len(input) >= 4 && strings.ToLower(input[:4]) == "help" {
 			help(input)
