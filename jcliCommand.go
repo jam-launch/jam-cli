@@ -20,6 +20,17 @@ var (
 	membersHeader = table.Row{colUsername, colLevel}
 )
 
+var (
+	colId             = "id"
+	colCreatedAt      = "Created At"
+	colDefaultRelease = "Default Release"
+	colPublic         = "Public"
+	colNetworkMode    = "Network Mode"
+	colServerBuild    = "Server Build"
+	colAllowGuests    = "Allow Guests"
+	releasesHeader    = table.Row{colId, colCreatedAt, colDefaultRelease, colPublic, colNetworkMode, colServerBuild, colAllowGuests}
+)
+
 func login() {
 	fmt.Println("Requesting new token...")
 
@@ -133,13 +144,21 @@ func projects_id(authToken string, name string) bool {
 					t := table.NewWriter()
 					tTemp := table.Table{}
 					tTemp.Render()
-					t.AppendHeader(membersHeader)
+					t.AppendHeader(releasesHeader)
 					t.SetTitle("Current Releases")
 					t.SetStyle(table.StyleColoredDark)
 
 					for _, release := range releases {
 						if relMap, ok := release.(map[string]interface{}); ok {
-							t.AppendRow(table.Row{relMap["name"], relMap["date"]}) // Change this
+							t.AppendRow(table.Row{
+								relMap["id"],
+								relMap["created_at"],
+								relMap["is_default"],
+								relMap["public"],
+								relMap["network_mode"],
+								relMap["server_build"],
+								relMap["allow_guests"],
+							})
 						}
 					}
 
@@ -230,9 +249,12 @@ func help(input string) {
 		fmt.Println("")
 		fmt.Println("PROJECTS (No Parameters)")
 		fmt.Println("PROJECTS (Project Name)")
+		fmt.Println("PROJECTS (Project Name) SESSIONS")
+		fmt.Println("PROJECTS (Project Name) SESSIONS (Session ID)")
 		fmt.Println("")
 		fmt.Println("This command will display the id and name of each project in a table format.")
 		fmt.Println("Running projects with parameters will display more specific details about a specific project.")
+		fmt.Println("Running projects with parameters and the \"sessions\" keyword will display session information about the project")
 	} else if len(parts) == 2 && strings.ToLower(parts[0]) == "help" && strings.ToLower(parts[1]) == "help" {
 		fmt.Println("HELP command details:")
 		fmt.Println("Provides Help information for Jam Launch CLI commands.")
