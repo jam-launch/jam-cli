@@ -8,43 +8,6 @@ import (
 	"github.com/jedib0t/go-pretty/table"
 )
 
-var (
-	colProjectIndex = "#"
-	colProjectName  = "Project Name"
-	projectHeader   = table.Row{colProjectIndex, colProjectName}
-)
-
-var (
-	colUsername   = "Username"
-	colLevel      = "Level"
-	membersHeader = table.Row{colUsername, colLevel}
-)
-
-var (
-	colId             = "id"
-	colCreatedAt      = "Created At"
-	colDefaultRelease = "Default Release"
-	colPublic         = "Public"
-	colNetworkMode    = "Network Mode"
-	colServerBuild    = "Server Build"
-	colAllowGuests    = "Allow Guests"
-	releasesHeader    = table.Row{colId, colCreatedAt, colDefaultRelease, colPublic, colNetworkMode, colServerBuild, colAllowGuests}
-)
-
-var (
-	colSessionId        = "Id"
-	colAddress          = "Address"
-	colSessionCreatedAt = "Created At"
-	colState            = "State"
-	sessionsHeader      = table.Row{colSessionId, colAddress, colSessionCreatedAt, colState}
-)
-
-var (
-	colPlayerUsername = "Username"
-	colHost           = "Host"
-	playerHeader      = table.Row{colPlayerUsername, colHost}
-)
-
 func login() {
 	fmt.Println("Requesting new token...")
 
@@ -79,6 +42,12 @@ func projects(authToken string) bool {
 			if len(projects) == 0 {
 				fmt.Println("You currently do not have any projects!")
 			} else {
+				var (
+					colProjectIndex = "Id"
+					colProjectName  = "Project Name"
+					projectHeader   = table.Row{colProjectIndex, colProjectName}
+				)
+
 				t := table.NewWriter()
 				tTemp := table.Table{}
 				tTemp.Render()
@@ -136,6 +105,12 @@ func projects_id(authToken string, name string) bool {
 				fmt.Println("")
 
 				if members, ok := data["members"].([]interface{}); ok && len(members) > 0 {
+					var (
+						colUsername   = "Username"
+						colLevel      = "Level"
+						membersHeader = table.Row{colUsername, colLevel}
+					)
+
 					t := table.NewWriter()
 					tTemp := table.Table{}
 					tTemp.Render()
@@ -154,6 +129,17 @@ func projects_id(authToken string, name string) bool {
 
 				if releases, ok := data["releases"].([]interface{}); ok && len(releases) > 0 {
 					fmt.Println("")
+
+					var (
+						colId             = "id"
+						colCreatedAt      = "Created At"
+						colDefaultRelease = "Default Release"
+						colPublic         = "Public"
+						colNetworkMode    = "Network Mode"
+						colServerBuild    = "Server Build"
+						colAllowGuests    = "Allow Guests"
+						releasesHeader    = table.Row{colId, colCreatedAt, colDefaultRelease, colPublic, colNetworkMode, colServerBuild, colAllowGuests}
+					)
 
 					t := table.NewWriter()
 					tTemp := table.Table{}
@@ -217,6 +203,14 @@ func projects_sessions(authToken string, name string) bool {
 		if successId {
 			if data != nil {
 				if sessions, ok := data["sessions"].([]interface{}); ok && len(sessions) > 0 {
+					var (
+						colSessionId        = "Id"
+						colAddress          = "Address"
+						colSessionCreatedAt = "Created At"
+						colState            = "State"
+						sessionsHeader      = table.Row{colSessionId, colAddress, colSessionCreatedAt, colState}
+					)
+
 					t := table.NewWriter()
 					tTemp := table.Table{}
 					tTemp.Render()
@@ -280,6 +274,12 @@ func projects_sessions_with_id(authToken string, name string, sessionId string) 
 				fmt.Println("")
 
 				if players, ok := data["players"].([]interface{}); ok && len(players) > 0 {
+					var (
+						colPlayerUsername = "Username"
+						colHost           = "Host"
+						playerHeader      = table.Row{colPlayerUsername, colHost}
+					)
+
 					t := table.NewWriter()
 					tTemp := table.Table{}
 					tTemp.Render()
