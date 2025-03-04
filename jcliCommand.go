@@ -31,6 +31,14 @@ var (
 	releasesHeader    = table.Row{colId, colCreatedAt, colDefaultRelease, colPublic, colNetworkMode, colServerBuild, colAllowGuests}
 )
 
+var (
+	colSessionId        = "id"
+	colAddress          = "Address"
+	colSessionCreatedAt = "Created At"
+	colState            = "State"
+	sessionsHeader      = table.Row{colSessionId, colAddress, colSessionCreatedAt, colState}
+)
+
 func login() {
 	fmt.Println("Requesting new token...")
 
@@ -198,7 +206,34 @@ func projects_sessions(authToken string, name string) bool {
 
 		var apiUrlSessions = "https://api.jamlaunch.com/projects/" + projectId + "/sessions"
 
-		fmt.Printf("Command: %s\n", apiUrlSessions)
+		data, successId := fetch(apiUrlSessions, authToken)
+
+		if successId {
+			if data != nil {
+				if sessions, ok := data["sessions"].([]interface{}); ok && len(sessions) > 0 {
+					t := table.NewWriter()
+					tTemp := table.Table{}
+					tTemp.Render()
+					t.AppendHeader(sessionsHeader)
+					t.SetTitle("Current Sessions")
+					t.SetStyle(table.StyleColoredDark)
+
+					for _, session := range sessions {
+						if memMap, ok := session.(map[string]interface{}); ok {
+							t.AppendRow(table.Row{memMap["id"], memMap["address"], memMap["createdAt"], memMap["state"]})
+						}
+					}
+
+					fmt.Println(t.Render())
+				} else {
+					fmt.Printf("This project currently has no sessions!\n")
+				}
+			} else {
+				fmt.Printf("This project currently has no sessions!\n")
+			}
+		} else {
+			fmt.Printf("\033[91mError: Unable to retrieve session data!\033[0m\n")
+		}
 	} else {
 		fmt.Printf("\033[91mError: Unable to retrieve projects!\033[0m\n")
 	}
