@@ -32,11 +32,17 @@ var (
 )
 
 var (
-	colSessionId        = "id"
+	colSessionId        = "Id"
 	colAddress          = "Address"
 	colSessionCreatedAt = "Created At"
 	colState            = "State"
 	sessionsHeader      = table.Row{colSessionId, colAddress, colSessionCreatedAt, colState}
+)
+
+var (
+	colPlayerUsername = "Username"
+	colHost           = "Host"
+	playerHeader      = table.Row{colPlayerUsername, colHost}
 )
 
 func login() {
@@ -262,7 +268,41 @@ func projects_sessions_with_id(authToken string, name string, sessionId string) 
 
 		var apiUrlSessionsWithId = "https://api.jamlaunch.com/projects/" + projectId + "/sessions/" + sessionId
 
-		fmt.Printf("Command: %s\n", apiUrlSessionsWithId)
+		data, successId := fetch(apiUrlSessionsWithId, authToken)
+
+		if successId {
+			if id, ok := data["id"]; ok {
+				fmt.Printf("\033[93mSession Id:\033[0m %s\n", id.(string))
+				fmt.Printf("\033[93mSession Address:\033[0m %s\n", data["address"].(string))
+				fmt.Printf("\033[93mSession Join Code:\033[0m %s\n", data["joinCode"].(string))
+				fmt.Printf("\033[93mSession Region:\033[0m %s\n", data["region"].(string))
+				fmt.Printf("\033[93mSession State:\033[0m %s\n", data["state"].(string))
+				fmt.Println("")
+
+				if players, ok := data["players"].([]interface{}); ok && len(players) > 0 {
+					t := table.NewWriter()
+					tTemp := table.Table{}
+					tTemp.Render()
+					t.AppendHeader(playerHeader)
+					t.SetTitle("Current Players")
+					t.SetStyle(table.StyleColoredDark)
+
+					for _, player := range players {
+						if memMap, ok := player.(map[string]interface{}); ok {
+							t.AppendRow(table.Row{memMap["username"], memMap["host"]})
+						}
+					}
+
+					fmt.Println(t.Render())
+				} else {
+					fmt.Printf("This session has no players!\n")
+				}
+			} else {
+				fmt.Printf("\033[91mError: Unable to find session or session does not exist!\033[0m\n")
+			}
+		} else {
+			fmt.Printf("\033[91mError: Unable to retrieve session data!\033[0m\n")
+		}
 	} else {
 		fmt.Printf("\033[91mError: Unable to retrieve projects!\033[0m\n")
 	}
