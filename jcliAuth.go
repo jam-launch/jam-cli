@@ -6,13 +6,16 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
 const (
 	deviceCodeEndpoint = "https://api.jamlaunch.com/device-auth/request"
 	userAuthEndpoint   = "https://app.jamlaunch.com/device-auth"
-	client_id          = "jamlaunch-addon"
+	DevClientId        = "jamlaunch-addon"
+	UserClientId       = "jam-play"
+	ApiBaseUrl         = "https://api.jamlaunch.com"
 )
 
 type DeviceCodeRequest struct {
@@ -30,10 +33,10 @@ type CheckAuthResponse struct {
 	AccessState string `json:"state"`
 }
 
-func requestUserCode() (*DeviceCodeResponse, error) {
+func requestUserCode(clientId string, scope string) (*DeviceCodeResponse, error) {
 	payload := DeviceCodeRequest{
-		ClientId: client_id,
-		Scope:    "developer",
+		ClientId: clientId,
+		Scope:    scope,
 	}
 	body, _ := json.Marshal(payload)
 
@@ -88,8 +91,8 @@ func checkAuth(deviceCodeResp *DeviceCodeResponse) (*CheckAuthResponse, error) {
 	}
 }
 
-func saveToken(token string) error {
-	data := map[string]string{"authToken": token}
+func saveToken(authToken string) error {
+	data := map[string]string{"authToken": authToken}
 
 	file, err := os.Create("userConfig.json")
 	if err != nil {
@@ -104,4 +107,56 @@ func saveToken(token string) error {
 	}
 
 	return nil
+}
+
+func getDevToken() (string, error) {
+	devResp, err := deviceAuthFlow(DevClientId, "developer")
+	if err != nil {
+		return "", fmt.Errorf("Failed to get developer token: %v", err)
+	}
+
+	if err = saveToken(devResp.AccessToken); err != nil {
+		return "", fmt.Errorf("error saving tokens: %v", err)
+	}
+
+	return devResp.AccessToken, nil
+}
+
+func deviceAuthFlow(clientId string, scope string) (*CheckAuthResponse, error) {
+	deviceCodeResp, err := requestUserCode(clientId, scope)
+	if err != nil {
+		return nil, fmt.Errorf("Error requesting user code: %v", err)
+	}
+
+	// Step 2: Display User Instructions
+	fmt.Printf("\033[93mVisit:\033[0m %s?user_code=%s\n", userAuthEndpoint, deviceCodeResp.UserCode)
+	fmt.Printf("\033[93mEnter the code:\033[0m %s\n", deviceCodeResp.UserCode)
+
+	// Step 3: Poll for Access Token
+	authResponse, err := checkAuth(deviceCodeResp)
+	if err != nil {
+		return nil, fmt.Errorf("error polling for token: %v", err)
+	}
+
+	return authResponse, nil
+}
+
+func getGameUserToken(gameId string, token string) (string, error) {
+	parts := strings.SplitN(gameId, "-", 2)
+	body := map[string]interface{}{
+		"release":  parts[1],
+		"test_num": 99,
+	}
+
+	res, err := apiPost(fmt.Sprintf("%s/projects/%s/testkey", ApiBaseUrl, parts[0]), token, body)
+	if err != nil {
+		return "", fmt.Errorf("error getting test token for game: %v", err)
+	}
+
+	token, ok := res["test_jwt"].(string)
+	if !ok {
+		return "", fmt.Errorf("game test token missing from API response")
+	}
+
+	return token, nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -9,27 +10,30 @@ import (
 )
 
 func login() {
-	fmt.Println("Requesting new token...")
+	fmt.Println("Requesting new tokens...")
 
-	deviceCodeResp, err := requestUserCode()
+	_, err := getDevToken()
 	if err != nil {
-		fmt.Printf("\033[91mError requesting user code: %v\033[0m\n", err)
-		return
+		log.Printf("\033[91mFailed to login: %v\033[0m\n", err)
+	}
+}
+
+func apiGet(p string, authToken string) bool {
+	var apiUrl = "https://api.jamlaunch.com/" + p
+
+	data, success := fetch(apiUrl, authToken)
+	if success {
+		jsonBytes, err := json.MarshalIndent(data, "", "  ")
+		if err != nil {
+			log.Printf("\033[91mError: failed to format response as JSON: %v\033[0m\n", err)
+			return false
+		}
+
+		jsonString := string(jsonBytes)
+		fmt.Println(jsonString)
 	}
 
-	fmt.Printf("\033[93mVisit:\033[0m %s?user_code=%s\n", userAuthEndpoint, deviceCodeResp.UserCode)
-	fmt.Printf("\033[93mEnter the code:\033[0m %s\n", deviceCodeResp.UserCode)
-
-	authResponse, err := checkAuth(deviceCodeResp)
-	if err != nil {
-		fmt.Printf("\033[91mError polling for token: %v\033[0m\n", err)
-		return
-	}
-
-	if err := saveToken(authResponse.AccessToken); err != nil {
-		fmt.Printf("\033[91mError saving token: %v\033[0m\n", err)
-		return
-	}
+	return false
 }
 
 func projects(authToken string) bool {

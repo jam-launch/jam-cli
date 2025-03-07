@@ -17,26 +17,10 @@ func main() {
 	if !result {
 		fmt.Println("\033[91mToken not found or invalid! User must authenticate again.\033[0m")
 
-		deviceCodeResp, err := requestUserCode()
+		var err error
+		token, err = getDevToken()
 		if err != nil {
-			fmt.Printf("\033[91mError requesting user code: %v\033[0m\n", err)
-			return
-		}
-
-		// Step 2: Display User Instructions
-		fmt.Printf("\033[93mVisit:\033[0m %s?user_code=%s\n", userAuthEndpoint, deviceCodeResp.UserCode)
-		fmt.Printf("\033[93mEnter the code:\033[0m %s\n", deviceCodeResp.UserCode)
-
-		// Step 3: Poll for Access Token
-		authResponse, err := checkAuth(deviceCodeResp)
-		if err != nil {
-			fmt.Printf("\033[91mError polling for token: %v\033[0m\n", err)
-			return
-		}
-
-		if err := saveToken(authResponse.AccessToken); err != nil {
-			fmt.Printf("\033[91mError saving token: %v\033[0m\n", err)
-			return
+			fmt.Printf("\033[31mFailed to get tokens: %v\n - exiting...\033[0m\n", err)
 		}
 	} else {
 		fmt.Printf("\033[92mLogin successful!\033[0m\n")
@@ -73,6 +57,17 @@ func main() {
 			} else {
 				projects_sessions_with_id(token, parts[1], parts[3])
 			}
+		} else if len(input) >= 3 && strings.ToLower(input[:3]) == "get" {
+			parts := strings.Fields(input)
+			apiGet(parts[1], token)
+		} else if len(input) >= 8 && strings.ToLower(input[:8]) == "game-get" {
+			parts := strings.Fields(input)
+			gameToken, err := getGameUserToken(parts[1], token)
+			if err != nil {
+				fmt.Printf("\033[31mFailed: %v\033[0m\n", err)
+				continue
+			}
+			apiGet(parts[2], gameToken)
 		} else if len(input) >= 4 && strings.ToLower(input[:4]) == "help" {
 			help(input)
 		} else if strings.ToLower(input) == "exit" {

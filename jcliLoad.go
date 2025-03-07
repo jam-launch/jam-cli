@@ -35,39 +35,51 @@ func loadToken() (bool, string) {
 		return false, ""
 	}
 
-	authToken := data["authToken"]
-
-	if authToken == "" {
+	authToken, ok := data["authToken"]
+	if !ok {
+		fmt.Printf("\n\033[91mError: missing auth token\033[0m\n")
 		return false, ""
 	}
 
-	result := parseToken(authToken)
+	if !checkToken(authToken) {
+		return false, ""
+	}
+
+	return true, authToken
+}
+
+func checkToken(token string) bool {
+	if token == "" {
+		return false
+	}
+
+	result := parseToken(token)
 	if result.Errored {
 		fmt.Printf("\n\033[91mError: %s\033[0m\n", result.Error)
-		return false, ""
+		return false
 	}
 
 	expiration, ok := result.Data.Claims["exp"].(float64)
 	if !ok {
 		fmt.Printf("\n\033[91mError: 'exp' claim is missing or not a float64\033[0m\n")
-		return false, ""
+		return false
 	}
 
 	expTime := time.Unix(int64(expiration), 0)
 
 	if time.Now().After(expTime) {
 		fmt.Printf("\n\033[91mError: Token Expired!\033[0m\n")
-		return false, ""
+		return false
 	}
 
-	verifyResult := verifyToken(authToken)
+	verifyResult := verifyToken(token)
 
 	if !verifyResult {
 		fmt.Printf("\n\033[91mError: Token Invalid!\033[0m\n")
-		return false, ""
+		return false
 	}
 
-	return true, authToken
+	return true
 }
 
 func parseToken(token string) TokenParseResult {
