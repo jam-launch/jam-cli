@@ -112,7 +112,7 @@ func saveToken(authToken string) error {
 func getDevToken() (string, error) {
 	devResp, err := deviceAuthFlow(DevClientId, "developer")
 	if err != nil {
-		return "", fmt.Errorf("Failed to get developer token: %v", err)
+		return "", fmt.Errorf("failed to get developer token: %v", err)
 	}
 
 	if err = saveToken(devResp.AccessToken); err != nil {
@@ -125,7 +125,7 @@ func getDevToken() (string, error) {
 func deviceAuthFlow(clientId string, scope string) (*CheckAuthResponse, error) {
 	deviceCodeResp, err := requestUserCode(clientId, scope)
 	if err != nil {
-		return nil, fmt.Errorf("Error requesting user code: %v", err)
+		return nil, fmt.Errorf("error requesting user code: %v", err)
 	}
 
 	// Step 2: Display User Instructions

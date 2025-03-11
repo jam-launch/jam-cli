@@ -22,7 +22,7 @@ func apiGet(p string, authToken string) bool {
 	var apiUrl = "https://api.jamlaunch.com/" + p
 
 	data, success := fetch(apiUrl, authToken)
-	if success {
+	if success == nil {
 		jsonBytes, err := json.MarshalIndent(data, "", "  ")
 		if err != nil {
 			log.Printf("\033[91mError: failed to format response as JSON: %v\033[0m\n", err)
@@ -31,6 +31,9 @@ func apiGet(p string, authToken string) bool {
 
 		jsonString := string(jsonBytes)
 		fmt.Println(jsonString)
+	} else {
+		fmt.Printf("\033[91m%s\033[0m\n", success)
+		return false
 	}
 
 	return false
@@ -41,7 +44,7 @@ func projects(authToken string) bool {
 
 	data, success := fetch(apiUrl, authToken)
 
-	if success {
+	if success == nil {
 		if projects, ok := data["projects"].([]interface{}); ok {
 			if len(projects) == 0 {
 				fmt.Println("You currently do not have any projects!")
@@ -72,17 +75,20 @@ func projects(authToken string) bool {
 			log.Printf("\033[91mPlease visit https://app.jamlaunch.com/projects and try again!\033[0m\n")
 			return false
 		}
+	} else {
+		fmt.Printf("\033[91m%s\033[0m\n", success)
+		return false
 	}
 
 	return true
 }
 
-func projects_id(authToken string, name string) bool {
+func projectsName(authToken string, name string) bool {
 	var apiUrlName = "https://api.jamlaunch.com/projects"
 
 	nameData, successName := fetch(apiUrlName, authToken)
 
-	if successName && nameData != nil {
+	if successName == nil && nameData != nil {
 		var projectId string
 
 		if projects, ok := nameData["projects"].([]interface{}); ok {
@@ -100,7 +106,7 @@ func projects_id(authToken string, name string) bool {
 
 		data, successId := fetch(apiUrlId, authToken)
 
-		if successId {
+		if successId == nil {
 			if data != nil && data["project_name"] != nil {
 				fmt.Printf("\033[93mProject Name:\033[0m %s\n", data["project_name"].(string))
 				fmt.Printf("\033[93mCreated At:\033[0m %s\n", data["created_at"].(string)[:10])
@@ -173,20 +179,24 @@ func projects_id(authToken string, name string) bool {
 			}
 		} else {
 			fmt.Printf("\033[91mError: Unable to retrieve project data!\033[0m\n")
+			fmt.Printf("\033[91m%s\033[0m\n", successId)
+			return false
 		}
 	} else {
 		fmt.Printf("\033[91mError: Unable to retrieve projects!\033[0m\n")
+		fmt.Printf("\033[91m%s\033[0m\n", successName)
+		return false
 	}
 
 	return true
 }
 
-func projects_sessions(authToken string, name string) bool {
+func projectSessions(authToken string, name string) bool {
 	var apiUrlName = "https://api.jamlaunch.com/projects"
 
 	nameData, successName := fetch(apiUrlName, authToken)
 
-	if successName && nameData != nil {
+	if successName == nil && nameData != nil {
 		var projectId string
 
 		if projects, ok := nameData["projects"].([]interface{}); ok {
@@ -204,7 +214,7 @@ func projects_sessions(authToken string, name string) bool {
 
 		data, successId := fetch(apiUrlSessions, authToken)
 
-		if successId {
+		if successId == nil {
 			if data != nil {
 				if sessions, ok := data["sessions"].([]interface{}); ok && len(sessions) > 0 {
 					var (
@@ -237,20 +247,24 @@ func projects_sessions(authToken string, name string) bool {
 			}
 		} else {
 			fmt.Printf("\033[91mError: Unable to retrieve session data!\033[0m\n")
+			fmt.Printf("\033[91m%s\033[0m\n", successId)
+			return false
 		}
 	} else {
 		fmt.Printf("\033[91mError: Unable to retrieve projects!\033[0m\n")
+		fmt.Printf("\033[91m%s\033[0m\n", successName)
+		return false
 	}
 
 	return true
 }
 
-func projects_sessions_with_id(authToken string, name string, sessionId string) bool {
+func projectSessionId(authToken string, name string, sessionId string) bool {
 	var apiUrlName = "https://api.jamlaunch.com/projects"
 
 	nameData, successName := fetch(apiUrlName, authToken)
 
-	if successName && nameData != nil {
+	if successName == nil && nameData != nil {
 		var projectId string
 
 		if projects, ok := nameData["projects"].([]interface{}); ok {
@@ -268,7 +282,7 @@ func projects_sessions_with_id(authToken string, name string, sessionId string) 
 
 		data, successId := fetch(apiUrlSessionsWithId, authToken)
 
-		if successId {
+		if successId == nil {
 			if id, ok := data["id"]; ok {
 				fmt.Printf("\033[93mSession Id:\033[0m %s\n", id.(string))
 				fmt.Printf("\033[93mSession Address:\033[0m %s\n", data["address"].(string))
@@ -306,9 +320,13 @@ func projects_sessions_with_id(authToken string, name string, sessionId string) 
 			}
 		} else {
 			fmt.Printf("\033[91mError: Unable to retrieve session data!\033[0m\n")
+			fmt.Printf("\033[91m%s\033[0m\n", successId)
+			return false
 		}
 	} else {
 		fmt.Printf("\033[91mError: Unable to retrieve projects!\033[0m\n")
+		fmt.Printf("\033[91m%s\033[0m\n", successName)
+		return false
 	}
 
 	return true

@@ -51,11 +51,11 @@ func main() {
 			if len(parts) == 1 && strings.ToLower(parts[0]) == "projects" {
 				projects(token)
 			} else if len(parts) == 2 {
-				projects_id(token, parts[1])
+				projectsName(token, parts[1])
 			} else if len(parts) == 3 {
-				projects_sessions(token, parts[1])
+				projectSessions(token, parts[1])
 			} else {
-				projects_sessions_with_id(token, parts[1], parts[3])
+				projectSessionId(token, parts[1], parts[3])
 			}
 		} else if len(input) >= 3 && strings.ToLower(input[:3]) == "get" {
 			parts := strings.Fields(input)

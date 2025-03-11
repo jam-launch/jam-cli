@@ -145,13 +145,14 @@ func verifyToken(authToken string) bool {
 
 	data, success := fetch(apiUrl, authToken)
 
-	if success {
+	if success == nil {
 		if _, exists := data["projects"]; exists {
 			return true
 		} else {
 			return false
 		}
 	} else {
+		fmt.Printf("\033[91m%s\033[0m\n", success)
 		return false
 	}
 }
