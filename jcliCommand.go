@@ -3,40 +3,41 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/jedib0t/go-pretty/table"
 )
 
-func login() {
+func login() error {
 	fmt.Println("Requesting new tokens...")
 
 	_, err := getDevToken()
 	if err != nil {
-		log.Printf("\033[91mFailed to login: %v\033[0m\n", err)
+		return fmt.Errorf("error: failed to login: %v", err)
 	}
+
+	return nil
 }
 
-func apiGet(p string, authToken string) bool {
+func apiGet(p string, authToken string) error {
 	var apiUrl = "https://api.jamlaunch.com/" + p
 
 	data, success := fetch(apiUrl, authToken)
 	if success == nil {
 		jsonBytes, err := json.MarshalIndent(data, "", "  ")
 		if err != nil {
-			log.Printf("\033[91mError: failed to format response as JSON: %v\033[0m\n", err)
-			return false
+			//log.Printf("\033[91mError: failed to format response as JSON: %v\033[0m\n", err)
+			return fmt.Errorf("error: failed to format response as json: %v", err)
 		}
 
 		jsonString := string(jsonBytes)
 		fmt.Println(jsonString)
 	} else {
-		fmt.Printf("\033[91m%s\033[0m\n", success)
-		return false
+		//fmt.Printf("\033[91m%s\033[0m\n", success)
+		return fmt.Errorf("error: %s", success)
 	}
 
-	return false
+	return nil
 }
 
 func projects(authToken string) error {
