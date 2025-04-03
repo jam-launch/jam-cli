@@ -39,7 +39,7 @@ func apiGet(p string, authToken string) bool {
 	return false
 }
 
-func projects(authToken string) bool {
+func projects(authToken string) error {
 	var apiUrl = "https://api.jamlaunch.com/projects"
 
 	data, success := fetch(apiUrl, authToken)
@@ -71,19 +71,16 @@ func projects(authToken string) bool {
 				fmt.Println(t.Render())
 			}
 		} else {
-			log.Printf("\033[91mError: projects is not an array!\033[0m\n")
-			log.Printf("\033[91mPlease visit https://app.jamlaunch.com/projects and try again!\033[0m\n")
-			return false
+			return fmt.Errorf("error: projects is not an array, please visit https://app.jamlaunch.com/projects and try again")
 		}
 	} else {
-		fmt.Printf("\033[91m%s\033[0m\n", success)
-		return false
+		return fmt.Errorf("%s", success)
 	}
 
-	return true
+	return nil
 }
 
-func projectsName(authToken string, name string) bool {
+func projectsName(authToken string, name string) error {
 	var apiUrlName = "https://api.jamlaunch.com/projects"
 
 	nameData, successName := fetch(apiUrlName, authToken)
@@ -175,23 +172,19 @@ func projectsName(authToken string, name string) bool {
 					fmt.Println(t.Render())
 				}
 			} else {
-				fmt.Printf("\033[91mError: Project not found!\033[0m\n")
+				return fmt.Errorf("error: project not found")
 			}
 		} else {
-			fmt.Printf("\033[91mError: Unable to retrieve project data!\033[0m\n")
-			fmt.Printf("\033[91m%s\033[0m\n", successId)
-			return false
+			return fmt.Errorf("error: unable to retrieve project data: %s", successId)
 		}
 	} else {
-		fmt.Printf("\033[91mError: Unable to retrieve projects!\033[0m\n")
-		fmt.Printf("\033[91m%s\033[0m\n", successName)
-		return false
+		return fmt.Errorf("error: unable to retrieve projects: %s", successName)
 	}
 
-	return true
+	return nil
 }
 
-func projectSessions(authToken string, name string) bool {
+func projectSessions(authToken string, name string) error {
 	var apiUrlName = "https://api.jamlaunch.com/projects"
 
 	nameData, successName := fetch(apiUrlName, authToken)
@@ -246,20 +239,16 @@ func projectSessions(authToken string, name string) bool {
 				fmt.Printf("This project currently has no sessions!\n")
 			}
 		} else {
-			fmt.Printf("\033[91mError: Unable to retrieve session data!\033[0m\n")
-			fmt.Printf("\033[91m%s\033[0m\n", successId)
-			return false
+			return fmt.Errorf("error: unable to retrieve session data: %s", successId)
 		}
 	} else {
-		fmt.Printf("\033[91mError: Unable to retrieve projects!\033[0m\n")
-		fmt.Printf("\033[91m%s\033[0m\n", successName)
-		return false
+		return fmt.Errorf("error: unable to retrieve projects: %s", successName)
 	}
 
-	return true
+	return nil
 }
 
-func projectSessionId(authToken string, name string, sessionId string) bool {
+func projectSessionId(authToken string, name string, sessionId string) error {
 	var apiUrlName = "https://api.jamlaunch.com/projects"
 
 	nameData, successName := fetch(apiUrlName, authToken)
@@ -316,20 +305,16 @@ func projectSessionId(authToken string, name string, sessionId string) bool {
 					fmt.Printf("This session has no players!\n")
 				}
 			} else {
-				fmt.Printf("\033[91mError: Unable to find session or session does not exist!\033[0m\n")
+				return fmt.Errorf("error: unable to find session or session does not exist")
 			}
 		} else {
-			fmt.Printf("\033[91mError: Unable to retrieve session data!\033[0m\n")
-			fmt.Printf("\033[91m%s\033[0m\n", successId)
-			return false
+			return fmt.Errorf("error: unable to retrieve session data: %s", successId)
 		}
 	} else {
-		fmt.Printf("\033[91mError: Unable to retrieve projects!\033[0m\n")
-		fmt.Printf("\033[91m%s\033[0m\n", successName)
-		return false
+		return fmt.Errorf("error: unable to retrieve projects: %s", successName)
 	}
 
-	return true
+	return nil
 }
 
 func help(input string) {

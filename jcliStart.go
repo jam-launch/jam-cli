@@ -49,13 +49,29 @@ func main() {
 		} else if len(input) >= 8 && strings.ToLower(input[:8]) == "projects" {
 			parts := strings.Fields(input)
 			if len(parts) == 1 && strings.ToLower(parts[0]) == "projects" {
-				projects(token)
+				err = projects(token)
+
+				if err != nil {
+					fmt.Printf("\033[91m%s\033[0m\n", err)
+				}
 			} else if len(parts) == 2 {
-				projectsName(token, parts[1])
+				err = projectsName(token, parts[1])
+
+				if err != nil {
+					fmt.Printf("\033[91m%s\033[0m\n", err)
+				}
 			} else if len(parts) == 3 {
-				projectSessions(token, parts[1])
+				err = projectSessions(token, parts[1])
+
+				if err != nil {
+					fmt.Printf("\033[91m%s\033[0m\n", err)
+				}
 			} else {
-				projectSessionId(token, parts[1], parts[3])
+				err = projectSessionId(token, parts[1], parts[3])
+
+				if err != nil {
+					fmt.Printf("\033[91m%s\033[0m\n", err)
+				}
 			}
 		} else if len(input) >= 3 && strings.ToLower(input[:3]) == "get" {
 			parts := strings.Fields(input)
