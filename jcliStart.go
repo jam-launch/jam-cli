@@ -7,6 +7,12 @@ import (
 	"strings"
 )
 
+func printError(errStr error) {
+	if errStr != nil {
+		fmt.Printf("\033[91m%s\033[0m\n", errStr)
+	}
+}
+
 func main() {
 	// Step 1: Request Device Code
 	fmt.Println("Welcome to the JamLaunch CLI!")
@@ -45,21 +51,34 @@ func main() {
 		input = strings.TrimSpace(input)
 
 		if strings.ToLower(input) == "login" {
-			login()
+			err = login()
+
+			printError(err)
 		} else if len(input) >= 8 && strings.ToLower(input[:8]) == "projects" {
 			parts := strings.Fields(input)
 			if len(parts) == 1 && strings.ToLower(parts[0]) == "projects" {
-				projects(token)
+				err = projects(token)
+
+				printError(err)
 			} else if len(parts) == 2 {
-				projectsName(token, parts[1])
+				err = projectsName(token, parts[1])
+
+				printError(err)
 			} else if len(parts) == 3 {
-				projectSessions(token, parts[1])
+				err = projectSessions(token, parts[1])
+
+				printError(err)
 			} else {
-				projectSessionId(token, parts[1], parts[3])
+				err = projectSessionId(token, parts[1], parts[3])
+
+				printError(err)
 			}
 		} else if len(input) >= 3 && strings.ToLower(input[:3]) == "get" {
 			parts := strings.Fields(input)
-			apiGet(parts[1], token)
+
+			err = apiGet(parts[1], token)
+
+			printError(err)
 		} else if len(input) >= 8 && strings.ToLower(input[:8]) == "game-get" {
 			parts := strings.Fields(input)
 			gameToken, err := getGameUserToken(parts[1], token)
@@ -67,7 +86,9 @@ func main() {
 				fmt.Printf("\033[31mFailed: %v\033[0m\n", err)
 				continue
 			}
-			apiGet(parts[2], gameToken)
+			err = apiGet(parts[2], gameToken)
+
+			printError(err)
 		} else if len(input) >= 4 && strings.ToLower(input[:4]) == "help" {
 			help(input)
 		} else if strings.ToLower(input) == "exit" {

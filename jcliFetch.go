@@ -12,7 +12,7 @@ import (
 func fetch(apiUrl string, authToken string) (map[string]interface{}, error) {
 	req, err := http.NewRequest("GET", apiUrl, nil)
 	if err != nil {
-		return map[string]interface{}{}, fmt.Errorf("error creating request: %w", err)
+		return map[string]interface{}{}, fmt.Errorf("%w", err)
 	}
 
 	req.Header.Add("Authorization", "Bearer "+authToken)
@@ -20,7 +20,7 @@ func fetch(apiUrl string, authToken string) (map[string]interface{}, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return map[string]interface{}{}, fmt.Errorf("error making request: %w", err)
+		return map[string]interface{}{}, fmt.Errorf("%w", err)
 	}
 	defer resp.Body.Close()
 
