@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	deviceCodeEndpoint = "https://api.jamlaunch.com/device-auth/request"
-	userAuthEndpoint   = "https://app.jamlaunch.com/device-auth"
+	DeviceCodeEndpoint = "https://api.jamlaunch.com/device-auth/request"
+	UserAuthEndpoint   = "https://app.jamlaunch.com/device-auth"
 	DevClientId        = "jamlaunch-addon"
 	UserClientId       = "jam-play"
 	ApiBaseUrl         = "https://api.jamlaunch.com"
@@ -40,7 +40,7 @@ func requestUserCode(clientId string, scope string) (*DeviceCodeResponse, error)
 	}
 	body, _ := json.Marshal(payload)
 
-	resp, err := http.Post(deviceCodeEndpoint, "application/json", bytes.NewBuffer(body))
+	resp, err := http.Post(DeviceCodeEndpoint, "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		return nil, fmt.Errorf("\033[91mfailed to send request: %w\033[0m", err)
 	}
@@ -60,7 +60,7 @@ func requestUserCode(clientId string, scope string) (*DeviceCodeResponse, error)
 }
 
 func checkAuth(deviceCodeResp *DeviceCodeResponse) (*CheckAuthResponse, error) {
-	checkURL := fmt.Sprintf("%s/%s/%s", deviceCodeEndpoint, deviceCodeResp.UserCode, deviceCodeResp.DeviceCode)
+	checkURL := fmt.Sprintf("%s/%s/%s", DeviceCodeEndpoint, deviceCodeResp.UserCode, deviceCodeResp.DeviceCode)
 
 	for {
 		// Send GET request
@@ -84,6 +84,8 @@ func checkAuth(deviceCodeResp *DeviceCodeResponse) (*CheckAuthResponse, error) {
 		if authResponse.AccessState == "allowed" {
 			fmt.Printf("\033[92mLogin successful!\033[0m\n")
 			return &authResponse, nil
+		} else if authResponse.AccessState == "denied" {
+			return nil, fmt.Errorf("login denied")
 		}
 
 		// Delay before the next request
@@ -129,7 +131,7 @@ func deviceAuthFlow(clientId string, scope string) (*CheckAuthResponse, error) {
 	}
 
 	// Step 2: Display User Instructions
-	fmt.Printf("\033[93mVisit:\033[0m %s?user_code=%s\n", userAuthEndpoint, deviceCodeResp.UserCode)
+	fmt.Printf("\033[93mVisit:\033[0m %s?user_code=%s\n", UserAuthEndpoint, deviceCodeResp.UserCode)
 	fmt.Printf("\033[93mEnter the code:\033[0m %s\n", deviceCodeResp.UserCode)
 
 	// Step 3: Poll for Access Token
