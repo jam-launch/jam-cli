@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/jessevdk/go-flags"
 )
 
 func printError(errStr error) {
@@ -13,18 +15,87 @@ func printError(errStr error) {
 	}
 }
 
+var token string
+
+type LoginCommand struct{}
+
+func (c *LoginCommand) Execute(args []string) error {
+	return login()
+}
+
+type ProjectsCommand struct{}
+
+func (c *ProjectsCommand) Execute(args []string) error {
+	switch len(args) {
+	case 0:
+		return projects(token)
+	case 1:
+		return projectsName(token, args[0])
+	case 2:
+		if strings.ToLower(args[1]) == "sessions" {
+			return projectSessions(token, args[0])
+		}
+		return fmt.Errorf("usage: projects <project-name> sessions")
+	case 3:
+		return projectSessionId(token, args[0], args[2])
+	default:
+		return fmt.Errorf("invalid usage of 'projects'")
+	}
+}
+
+type GetCommand struct{}
+
+func (c *GetCommand) Execute(args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("missing endpoint for get command")
+	}
+	return apiGet(args[0], token)
+}
+
+type GameGetCommand struct{}
+
+func (c *GameGetCommand) Execute(args []string) error {
+	if len(args) < 2 {
+		return fmt.Errorf("usage: game-get <user-id> <endpoint>")
+	}
+	gameToken, err := getGameUserToken(args[0], token)
+	if err != nil {
+		return fmt.Errorf("failed to get game token: %v", err)
+	}
+	return apiGet(args[1], gameToken)
+}
+
+type HelpCommand struct{}
+
+func (c *HelpCommand) Execute(args []string) error {
+	input := "help"
+	if len(args) > 0 {
+		input += " " + strings.Join(args, " ")
+	}
+	help(input)
+	return nil
+}
+
+type Command struct {
+	Login    LoginCommand    `command:"login" description:"Log in to the system"`
+	Projects ProjectsCommand `command:"projects" description:"Manage projects"`
+	Get      GetCommand      `command:"get" description:"Call an API GET endpoint"`
+	GameGet  GameGetCommand  `command:"game-get" description:"Call an API GET endpoint as a game user"`
+	Help     HelpCommand     `command:"help" description:"Show help"`
+}
+
 func main() {
 	// Step 1: Request Device Code
 	fmt.Println("Welcome to the JamLaunch CLI!")
 
 	fmt.Print("Checking token...")
-	result, token := loadToken()
+	result, tok := loadToken()
 
 	if !result {
 		fmt.Println("\033[91mToken not found or invalid! User must authenticate again.\033[0m")
 
 		var err error
-		token, err = getDevToken()
+		tok, err = getDevToken()
 		if err != nil {
 			fmt.Printf("\033[31mFailed to get tokens: %v\n - exiting...\033[0m\n", err)
 		}
@@ -32,9 +103,14 @@ func main() {
 		fmt.Printf("\033[92mLogin successful!\033[0m\n")
 	}
 
+	token = tok
+
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Println("Type your message below. Type 'exit' to quit.")
+
+	var cmd Command
+	parser := flags.NewParser(&cmd, flags.None)
 
 	for {
 		// Display a prompt
@@ -50,53 +126,14 @@ func main() {
 		// Trim whitespace
 		input = strings.TrimSpace(input)
 
-		if strings.ToLower(input) == "login" {
-			err = login()
-
-			printError(err)
-		} else if len(input) >= 8 && strings.ToLower(input[:8]) == "projects" {
-			parts := strings.Fields(input)
-			if len(parts) == 1 && strings.ToLower(parts[0]) == "projects" {
-				err = projects(token)
-
-				printError(err)
-			} else if len(parts) == 2 {
-				err = projectsName(token, parts[1])
-
-				printError(err)
-			} else if len(parts) == 3 {
-				err = projectSessions(token, parts[1])
-
-				printError(err)
-			} else {
-				err = projectSessionId(token, parts[1], parts[3])
-
-				printError(err)
-			}
-		} else if len(input) >= 3 && strings.ToLower(input[:3]) == "get" {
-			parts := strings.Fields(input)
-
-			err = apiGet(parts[1], token)
-
-			printError(err)
-		} else if len(input) >= 8 && strings.ToLower(input[:8]) == "game-get" {
-			parts := strings.Fields(input)
-			gameToken, err := getGameUserToken(parts[1], token)
-			if err != nil {
-				fmt.Printf("\033[31mFailed: %v\033[0m\n", err)
-				continue
-			}
-			err = apiGet(parts[2], gameToken)
-
-			printError(err)
-		} else if len(input) >= 4 && strings.ToLower(input[:4]) == "help" {
-			help(input)
-		} else if strings.ToLower(input) == "exit" {
+		if strings.ToLower(input) == "exit" {
 			fmt.Println("Goodbye!")
 			break
-		} else {
-			fmt.Printf("\033[31m%s is not a valid command!\033[0m\n", input)
 		}
+
+		args := strings.Fields(input)
+		_, err = parser.ParseArgs(args)
+		printError(err)
 	}
 }
 
